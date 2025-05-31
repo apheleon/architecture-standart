@@ -1,0 +1,31 @@
+@startuml bank
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/refs/heads/master/C4_Container.puml
+
+Person(customer, "Клиент", "Клиент банка")
+Person(frontOffice, "Менеджер", "фронт-офис")
+Person(backOffice, "Менеджер", "бэк-офис")
+
+
+System_Ext(telecom, "Телекомуникацонная компания", "сообщения")
+System_Ext(cb, "Центральный банк", "сообщения")
+
+System_Boundary(bankInfra, "Инфраструктура банка") {
+    System(web, "Сайт банка")
+    System(internetBank, "Интернет банк")
+
+    System(bank, "Банк", "crm, server, etc...")
+    System(abs, "АБС", "сообщения")
+}
+
+Rel(customer, web, "знакомство")
+Rel(customer, internetBank, "обращение")
+Rel(frontOffice, bank, "данные")
+Rel(backOffice, abs, "данные")
+
+Rel(bank, abs, "данные")
+
+Rel(web, bank, "данные")
+Rel(internetBank, bank, "данные")
+
+Rel(bank, telecom, "сообщения")
+Rel(bank, cb, "ставки, курсы, etc...")
