@@ -8,12 +8,14 @@ Person(backOffice, "Менеджер", "бэк-офис")
 
 System_Ext(telecom, "Телекомуникацонная компания", "сообщения")
 System_Ext(cb, "Центральный банк", "сообщения")
+System_Ext(callcenter, "Колл-центр", "сторонняя организация")
 
 System_Boundary(bankInfra, "Инфраструктура банка") {
     System(web, "Сайт банка")
     System(internetBank, "Интернет банк")
-    System(callcenterbank, "Колл-центр", "сторонняя организация")
-
+    System(callcenterbank, "Колл-центр", "балансировка входящих обращений")
+    System(sftp, "SFTP server", "хренение XLS документов с депозитами")
+    System(depositProxy, "Прокси сервис", "предоставляет доступ к депозитам")
     System(bank, "Банк", "crm, server, etc...")
     System(abs, "АБС", "сообщения")
 }
@@ -22,7 +24,6 @@ Rel(customer, web, "знакомство")
 Rel(customer, internetBank, "обращение")
 Rel(frontOffice, bank, "данные")
 Rel(backOffice, abs, "данные")
-Rel(customer, callcenterbank, "запрос")
 
 Rel(bank, abs, "данные")
 
@@ -31,3 +32,13 @@ Rel(internetBank, bank, "данные")
 
 Rel(bank, telecom, "сообщения")
 Rel(bank, cb, "ставки, курсы, etc...")
+
+Rel(callcenterbank, depositProxy, "API запрос ставок")
+Rel(callcenter, sftp, "запрос файла с депозитами")
+
+Rel(bank, sftp, "задание на выгрузку новых документов")
+
+Rel(callcenterbank, callcenter, "перенаправление обращение")
+Rel(depositProxy, bank, "запрос ставок")
+
+Rel(sftp, depositProxy, "fallback")
