@@ -1,0 +1,93 @@
+@startuml bank
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/refs/heads/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+
+title Internet bank
+
+System_Ext(telecom, "Телекомуникацонная компания", "сообщения")
+System_Ext(cb, "Центральный банк", "сообщения")
+System_Ext(internetBankQ, "Очередь обработки запросов", "Kafka")
+Person(backOffice, "Менеджер", "бэк-офис")
+Person(customer, "Клиент", "Клиент банка")
+System_Ext(callCenterThird, "Кол-центр", "партнёр")
+
+System_Boundary(absLocal, "АБС") {
+    Container(depositRateProcessor, "Управление ставками", "Go", "сбор и обработка данных для расчёта ставок")
+    Container(depositRateSuggest, "Ставки по депозитам", "Go", "расчёт персональных ставок по депозитам")
+    Container(depositControll, "Управление депозитами", "Go", "решение об открытии/закрытии депозита")
+    Container(depositExport, "Экспортирование ставок", "Go", "экспорт в прокси-сервис, регламент")
+    ContainerDb(absDB, "MsSQL")
+}
+
+System_Boundary(callCenter, "Кол-центр") {
+    Container(balancer, "балансировщик", "Soft", "Распределяем звонки по очередям кол-центров")
+    Container(crmApi, "Запросы от CRM кол-центра", "Go", "Получаем ставки")
+}
+
+System_Boundary(internetBank, "Интернет-банк") {
+
+    Container(loadBalancer, "балансировщик", "Nginx", "масштабируемость, надежность и производительность")
+    Container(rateLimire, "API Rate Limiter", "Nginx, Cloudflare", "ограничиваем возможность спама запросами")
+
+    Container(authController, "Авторизация клиента", "Go", "проверяем credentials")
+
+    Container(depositList, "Персональные ставки по депозитам", "Go", "доступные депозиты")
+    Container(depositOpen, "Заявка на открытие депозита", "Go", "открытие депозита")
+    Container(depositClose, "Заявка на закрытие депозита", "Go", "закрытие депозита")
+}
+
+
+System_Boundary(depositProxy, "Прокси сервис для хранения и получения ставок"){
+    Container(rateReceiver, "Данные по ставкам", "Go", "входящая выгрузка")
+    Container(fileGenerator, "Генерация файла со ставками", "Go", "передача файлов")
+    Container(rateRequest, "Получение ставок", "Go", "запрос конкретной ставки")
+    ContainerDb(cache, "Redis")
+}
+
+System_Boundary(sftp, "SFTP"){
+    Container(storage, "Файлы со ставками", "SFTP", "готовые файлы")
+    Container(fileReceiver, "Запрос файла", "Go", "получение файлов")
+}
+
+System_Boundary(notifyCenter, "Центр коммуникаций с клиентами") {
+    Container(notify, "Общение с клиентами", "Go", "уведомления лб открытии/закрытии")
+}
+
+Rel(callCenterThird, storage, "запрос файла")
+Rel(storage, fileGenerator, "запрос файла")
+Rel(fileGenerator, cache, "запрос данных из кэша")
+Rel(fileGenerator, rateRequest, "запрос данных из АБС")
+Rel(rateRequest, cache, "кэшируем")
+
+Rel(depositExport, rateReceiver, "данные по ставкам")
+
+Rel(balancer, callCenterThird, "перенаправление звонка")
+Rel(crmApi, rateReceiver, "запрос ставок")
+
+Rel(customer, loadBalancer, "запрос")
+Rel(loadBalancer, rateLimire, "request")
+Rel(rateLimire, authController, "request")
+
+Rel(authController, depositList, "request")
+
+Rel(authController, depositOpen, "depositId, счёт, сумму депозита")
+Rel(authController, depositClose, "счёт")
+
+
+Rel(depositRateProcessor, cb, "запрос ключевой ставки")
+Rel(depositRateProcessor, absDB, "запрос ключевой ставки")
+Rel(depositControll, absDB, "управление депозитом")
+Rel(depositRateSuggest, absDB, "персональные предложения")
+
+Rel(backOffice, internetBankQ, "решение по ставке")
+
+Rel(depositOpen, internetBankQ, "открытие депозита")
+Rel(depositClose, internetBankQ, "закрытие депозита")
+
+Rel(internetBankQ, depositRateSuggest, "персональные ставки")
+Rel(internetBankQ, depositRateProcessor, "персональные ставки")
+
+Rel(depositControll, notify, "уведомление клиента")
+
+Rel(notify, telecom, "уведомление клиента")

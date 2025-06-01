@@ -59,4 +59,4 @@ Rel(internetBankQ, depositRateProcessor, "персональные ставки"
 
 Rel(depositControll, notify, "уведомление клиента")
 
-Rel(notify, control, "уведомление клиента")
+Rel(notify, telecom, "уведомление клиента")
